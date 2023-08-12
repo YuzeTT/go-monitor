@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html class="dark">
+  <header>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>屏幕预览</title>
+    <!-- Import style -->
+    <link
+      rel="stylesheet"
+      href="//unpkg.com/element-plus/theme-chalk/index.css"
+    />
+    <link
+      rel="stylesheet"
+      href="//unpkg.com/element-plus/theme-chalk/dark/css-vars.css"
+    />
+
+    <!-- Import Vue 3 -->
+    <script src="//unpkg.com/vue@3"></script>
+    <!-- Import component library -->
+    <script src="//unpkg.com/element-plus"></script>
+    <script src="https://cdn.staticfile.org/axios/0.18.0/axios.min.js"></script>
+    <style>
+      body {
+        margin: 0;
+        /* height: 100%; */
+        /* display: flex;
+      align-items: center;
+      justify-content: center; */
+        display: flex;
+        flex-direction: column;
+        max-height: 100vh;
+        overflow: hidden;
+        color: white;
+        background-color: #141414;
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      .container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh; /* 设置容器高度为视口高度 */
+      }
+      .row {
+        flex-grow: 0;
+        flex-shrink: 0;
+        flex-basis: auto;
+      }
+      .full-width {
+        flex-grow: 1; /* 设置中间行的flex-grow属性为1，使其撑满页面宽度 */
+      }
+
+      .header {
+        padding: 4px 8px;
+        border-bottom: 1px solid var(--el-border-color);
+      }
+
+      .bar {
+        background-color: #181818;
+      }
+    </style>
+  </header>
+
+  <body>
+    <div id="app">
+      <div class="container">
+        <div class="row header bar">
+          <el-text class="mx-1" type="primary">{{info.hostname}}</el-text>
+          <el-text class="mx-1" type="info"> | </el-text>
+          <el-text class="mx-1" type="info">{{info.platform}}</el-text>
+        </div>
+        <!-- <div
+          class="row full-width"
+          style="
+            background: url(imgurl) no-repeat center;
+            background-size: contain;
+          "
+        ></div> -->
+        <div
+          class="row full-width"
+          style="
+            background: url('/video_feed') no-repeat center;
+            background-size: contain;
+          "
+        ></div>
+        <!-- <img :src="imgurl" alt="">
+        <div :style="{ backgroundImage: 'url(' + imageUrl + ')'}" style="min-height: 300px; min-width: 300px;"></div> -->
+        <div
+          class="row bar"
+          style="padding: 8px; border-top: 1px solid var(--el-border-color)"
+        >
+          <!-- {{status.mem_used}} -->
+          <div>
+            <el-row :gutter="5">
+              <!-- <el-col :span="3">
+                <el-text type="info" size="small">CPU使用率</el-text>
+                <el-progress :percentage="parseInt(status.cpu_used[0])" style="padding-top: 5px;" />
+              </el-col> -->
+              <el-col :span="3">
+                <el-text type="info" size="small">内存使用率</el-text>
+                <el-progress :percentage="status.mem_used" style="padding-top: 5px;" />
+              </el-col>
+              <!-- <el-col :span="6">
+                <el-statistic
+                  title="内存使用率"
+                  :value="status.mem_used"
+                  suffix="%"
+                />
+              </el-col> -->
+            </el-row>
+          </div>
+          <!-- <el-table :data="logsData" height="100px">
+            <el-table-column
+              label="时间"
+              prop="time"
+              width="100"
+            ></el-table-column>
+            <el-table-column label="消息" prop="msg"></el-table-column>
+          </el-table> -->
+        </div>
+        <!-- <el-tabs v-model="activeName">
+          <el-tab-pane label="日志" name="logs">
+            <el-table :data="logsData" height="450px">
+              <el-table-column
+                label="时间"
+                prop="time"
+                width="100"
+              ></el-table-column>
+              <el-table-column label="消息" prop="msg"></el-table-column>
+            </el-table>
+            <el-row :gutter="20">
+              <el-col :span="22">
+                <el-input v-model="msgForm.msg" type="text"></el-input>
+              </el-col>
+              <el-col :span="2">
+                <el-button type="primary" v-on:click="onsubmit"
+                  >发送</el-button
+                >
+              </el-col>
+            </el-row>
+          </el-tab-pane>
+          <el-tab-pane label="设置" name="settings"></el-tab-pane>
+        </el-tabs> -->
+      </div>
+    </div>
+  </body>
+  <script>
+    var Main = {
+      data() {
+        return {
+          activeName: "logs",
+          logsData: null,
+          msgForm: {
+            msg: "",
+          },
+          status: {
+            // cpu_used: [0],
+            mem_free: 0,
+            mem_total: 0,
+            mem_used: 0,
+          },
+          info: {},
+          imgurl: ''
+        };
+      },
+      methods: {
+        onsubmit(event) {
+          ws.send(this.msgForm.msg);
+          this.msgForm.msg = "";
+        },
+      },
+      mounted() {
+        const imgUrl = '/video_feed';
+        axios.get(imgUrl, { responseType: 'arraybuffer' })
+          .then(response => {
+            const base64 = btoa(
+              new Uint8Array(response.data)
+                .reduce((data, byte) => data + String.fromCharCode(byte), '')
+            );
+            this.imgurl = `data:image/jpeg;base64,${base64}`;
+          });
+      }
+    };
+    const app = Vue.createApp(Main);
+    app.use(ElementPlus);
+    v = app.mount("#app");
+    
+    const get_status = () => {
+      axios
+        .get("/status")
+        .then(function (response) {
+          // console.log(response);
+          v.status = response.data;
+        })
+        .catch(function (error) {
+          console.log(error);
+        });
+    }
+    get_status()
+
+    axios
+      .get("/info")
+      .then(function (response) {
+        // console.log(response);
+        v.info = response.data.data;
+      })
+      .catch(function (error) {
+        console.log(error);
+      });
+
+    // axios({
+    //   method: 'get',
+    //   url: "/video_feed",
+    //   responseType: 'blob'
+    // }).then((result) => {
+    //   console.log(URL.createObjectURL(result.data));
+    //   v.imgurl = URL.createObjectURL(result.data)
+    // })
+    // axios.get('/video_feed',{responseType: 'blob'}).then((result) => {
+    //   console.log(result.data);
+    //   console.log(URL.createObjectURL(result.data));
+    //   v.imgurl = URL.createObjectURL(result.data)
+    // })
+
+    // axios.get('/video_feed', { responseType: 'arraybuffer' })
+    //   .then(response => {
+    //     const base64 = btoa(
+    //       new Uint8Array(response.data)
+    //         .reduce((data, byte) => data + String.fromCharCode(byte), '')
+    //     );
+    //     const imgurl_ = `data:image/jpeg;base64,${base64}`;
+    //     v.imgurl = `url(${imgurl_})`;
+    //     console.log(imgurl_);
+    //   });
+
+    window.setInterval(function logname() {
+      get_status()
+      // console.log("测试");
+    }, 3000);
+    var ws = new WebSocket("ws://" + location.host + "/ws");
+    ws.onopen = function () {
+      var d = new Date();
+      v.logsData = [
+        {
+          time: d.getHours() + ":" + d.getMinutes() + ":" + d.getSeconds(),
+          msg: "成功建立websocket连接",
+        },
+      ];
+    };
+    ws.onmessage = function (event) {
+      var rec = event.data;
+
+      // TODO
+      // v.logsData = v.logsData.concat(JSON.parse(rec));
+    };
+    ws.onclose = function (event) {
+      var d = new Date();
+      v.logsData.push({
+        time: d.getHours() + ":" + d.getMinutes() + ":" + d.getSeconds(),
+        msg: "websocket连接断开",
+      });
+    };
+    ws.onerror = function (event) {
+      console.log(event);
+    };
+  </script>
+</html>
